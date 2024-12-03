@@ -168,6 +168,7 @@ class WeatherServer {
     this.server.setRequestHandler(
       CallToolRequestSchema,
       async (request) => {
+        console.log('request', request.params);
         if (request.params.name !== "get_forecast") {
           throw new McpError(
             ErrorCode.MethodNotFound,

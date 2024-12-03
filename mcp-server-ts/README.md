@@ -53,7 +53,7 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 {
   "mcpServers": {
     "mpc-server": {
-      "command": "/path/to/mcp-server/build/index.js"
+      "command": "/path/to/mcp-server-ts/build/index.js"
     }
   }
 }
