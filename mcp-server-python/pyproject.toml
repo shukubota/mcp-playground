@@ -1,0 +1,17 @@
+[project]
+name = "card-server"
+version = "0.1.0"
+description = "fetch relative card informations form vertexai"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [ "mcp>=1.0.0",]
+[[project.authors]]
+name = "shukubota"
+email = "kubotashu0421@gmail.com"
+
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project.scripts]
+card-server = "card_server:main"
