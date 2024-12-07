@@ -5,8 +5,8 @@ import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from pydantic import AnyUrl
 import mcp.server.stdio
+import json
 
-# Store notes as a simple key-value dict to demonstrate state management
 notes: dict[str, str] = {}
 
 server = Server("card_server")
@@ -19,12 +19,11 @@ async def handle_list_resources() -> list[types.Resource]:
     """
     return [
         types.Resource(
-            uri=AnyUrl(f"note://internal/{name}"),
-            name=f"Note: {name}",
-            description=f"A simple note named {name}",
-            mimeType="text/plain",
+            uri=AnyUrl(f"card://internal/card"),
+            name="Card",
+            mimeType="application/json",
+            description="Rerative card information",
         )
-        for name in notes
     ]
 
 @server.read_resource()
@@ -33,6 +32,9 @@ async def handle_read_resource(uri: AnyUrl) -> str:
     Read a specific note's content by its URI.
     The note name is extracted from the URI host component.
     """
+    if uri.scheme == "card":
+        return "card"
+
     if uri.scheme != "note":
         raise ValueError(f"Unsupported URI scheme: {uri.scheme}")
 
@@ -50,12 +52,12 @@ async def handle_list_prompts() -> list[types.Prompt]:
     """
     return [
         types.Prompt(
-            name="summarize-notes",
-            description="Creates a summary of all notes",
+            name="fetch-cards",
+            description="fetch card information",
             arguments=[
                 types.PromptArgument(
-                    name="style",
-                    description="Style of the summary (brief/detailed)",
+                    name="keyword",
+                    description="card keyword",
                     required=False,
                 )
             ],
@@ -70,6 +72,30 @@ async def handle_get_prompt(
     Generate a prompt by combining arguments with server state.
     The prompt includes all current notes and can be customized via arguments.
     """
+
+    if name == "fetch-cards":
+        if not arguments:
+            raise ValueError("Missing arguments")
+
+        word = arguments.get("keyword")
+        if not word:
+            raise ValueError("Missing word")
+
+        data = await fetch_relative_cards(word)
+
+        return types.GetPromptResult(
+            description="Get relative cards",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=json.dumps(data, indent=2),
+                    ),
+                )
+            ],
+        )
+
     if name != "summarize-notes":
         raise ValueError(f"Unknown prompt: {name}")
 
@@ -101,15 +127,14 @@ async def handle_list_tools() -> list[types.Tool]:
     """
     return [
         types.Tool(
-            name="add-note",
-            description="Add a new note",
+            name="get-cards",
+            description="Get relative cards",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "name": {"type": "string"},
-                    "content": {"type": "string"},
+                    "word": {"type": "string"},
                 },
-                "required": ["name", "content"],
+                "required": ["word"],
             },
         )
     ]
@@ -122,6 +147,30 @@ async def handle_call_tool(
     Handle tool execution requests.
     Tools can modify server state and notify clients of changes.
     """
+    if name == "get-cards":
+        if not arguments:
+            raise ValueError("Missing arguments")
+
+        word = arguments.get("word")
+        if not word:
+            raise ValueError("Missing word")
+
+        data = dict()
+        data["cards"] = []
+        data["cards"].append(
+            {
+                "name": "card2",
+                "content": "This is the content of card12",
+            }
+        )
+
+        return [
+            types.TextContent(
+                type="text",
+                text=json.dumps(data, indent=2),
+            )
+        ]
+
     if name != "add-note":
         raise ValueError(f"Unknown tool: {name}")
 
@@ -147,8 +196,19 @@ async def handle_call_tool(
         )
     ]
 
+async def fetch_relative_cards(word: str) -> dict[str, any]:
+    res = dict()
+    res["cards"] = []
+    res["cards"].append(
+        {
+            "name": "card1",
+            "content": "This is the content of card1",
+        }
+    )
+
+    return res
+
 async def main():
-    # Run the server using stdin/stdout streams
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
