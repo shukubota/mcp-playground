@@ -1,4 +1,8 @@
 ## MCPサーバ(typescript)
+### example
+https://github.com/modelcontextprotocol/servers/blob/c19925b8f0f2815ad72b08d2368f0007c86eb8e6/src/brave-search/index.ts#L315
+brave-searchの例.
+
 ### inspector
 基本的に
 https://modelcontextprotocol.io/docs/tools/inspector
