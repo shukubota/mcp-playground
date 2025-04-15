@@ -12,36 +12,6 @@ const server = new McpServer({
   },
 });
 
-server.resource(
-  "fizzbuzz-rules",
-  "knowledge://fizzbuzz/rules",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: "特殊なFizzBuzzルール：\n" +
-            "- 数字が7777の場合は「FizzBuzz」を返します\n" +
-            "- 数字が3333の場合は「Fizz」を返します\n" +
-            "- 数字が5555の場合は「Buzz」を返します\n" +
-            "- その他の数字の場合は「nothing」を返します"
-    }]
-  })
-);
-
-server.resource(
-  "fizzbuzz-examples",
-  "knowledge://fizzbuzz/examples",
-  async (uri) => ({
-    contents: [{
-      uri: uri.href,
-      text: "FizzBuzz使用例：\n" +
-            "- 入力: 7777 → 出力: FizzBuzz\n" +
-            "- 入力: 3333 → 出力: Fizz\n" +
-            "- 入力: 5555 → 出力: Buzz\n" +
-            "- 入力: 1000 → 出力: nothing"
-    }]
-  })
-);
-
 server.tool(
   "getPrivateFizzBuzz",
   "get private knowledge about fizzbuzz",
