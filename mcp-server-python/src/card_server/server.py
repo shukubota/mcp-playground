@@ -6,10 +6,26 @@ from mcp.server import NotificationOptions, Server
 from pydantic import AnyUrl
 import mcp.server.stdio
 import json
+from .bigquery_client import BigqueryClient
+import os
 
 notes: dict[str, str] = {}
 
 server = Server("card_server")
+
+project_id = "gig-sandbox-ai"
+dataset_id = "yugioh_dataset"
+embedding_table = "card_embeddings"
+location = "us-central1"
+
+# 認証設定
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/shukubota/projects/md-chatbot/gig-sandbox-ai-a724e4b9b06e.json"
+
+inquirer = BigqueryClient(
+    project_id=project_id,
+    dataset_id=dataset_id,
+    location=location
+)
 
 @server.list_resources()
 async def handle_list_resources() -> list[types.Resource]:
@@ -143,69 +159,38 @@ async def handle_list_tools() -> list[types.Tool]:
 async def handle_call_tool(
     name: str, arguments: dict | None
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-    """
-    Handle tool execution requests.
-    Tools can modify server state and notify clients of changes.
-    """
-    if name == "get-cards":
-        if not arguments:
-            raise ValueError("Missing arguments")
-
-        word = arguments.get("word")
-        if not word:
-            raise ValueError("Missing word")
-
-        data = dict()
-        data["cards"] = []
-        data["cards"].append(
-            {
-                "name": "card2",
-                "content": "This is the content of card12",
-            }
-        )
-
-        return [
-            types.TextContent(
-                type="text",
-                text=json.dumps(data, indent=2),
-            )
-        ]
-
-    if name != "add-note":
+    if name != "get-cards":
         raise ValueError(f"Unknown tool: {name}")
 
     if not arguments:
         raise ValueError("Missing arguments")
 
-    note_name = arguments.get("name")
-    content = arguments.get("content")
+    word = arguments.get("word")
+    if not word:
+        raise ValueError("Missing word")
 
-    if not note_name or not content:
-        raise ValueError("Missing name or content")
-
-    # Update server state
-    notes[note_name] = content
-
-    # Notify clients that resources have changed
-    await server.request_context.session.send_resource_list_changed()
+    data = await fetch_relative_cards(word)
 
     return [
         types.TextContent(
             type="text",
-            text=f"Added note '{note_name}' with content: {content}",
+            text=json.dumps(data, indent=2),
         )
     ]
 
 async def fetch_relative_cards(word: str) -> dict[str, any]:
-    res = dict()
-    res["cards"] = []
-    res["cards"].append(
-        {
-            "name": "card1",
-            "content": "This is the content of card1",
-        }
-    )
-
+    # inquirerを使ってカード情報を取得
+    similar_cards = inquirer.get_similar_cards(word, embedding_table)
+    
+    # レスポンス形式に変換
+    res = {"cards": []}
+    for card in similar_cards:
+        res["cards"].append({
+            "name": f"card_{card.card_id}",
+            "content": card.card_info,
+            "similarity": card.similarity
+        })
+    
     return res
 
 async def main():
